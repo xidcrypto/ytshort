@@ -3,6 +3,7 @@ import "server-only";
 import type { Job, JobEvent, Prisma } from "@prisma/client";
 
 import { prisma } from "./db";
+import { broadcastAgentEvent } from "./agent-events";
 
 export type JobWithEvents = Job & { events: JobEvent[] };
 
@@ -20,8 +21,8 @@ export async function createJob(input: {
   privacy: string;
 }): Promise<Job> {
   const title = defaultTitle(input.topic, input.title);
-  return prisma.$transaction(async (tx) => {
-    const job = await tx.job.create({
+  const job = await prisma.$transaction(async (tx) => {
+    const created = await tx.job.create({
       data: {
         topic: input.topic.trim(),
         title,
@@ -31,10 +32,14 @@ export async function createJob(input: {
       },
     });
     await tx.jobEvent.create({
-      data: { jobId: job.id, fromStatus: null, toStatus: "pending", note: "Job dibuat" },
+      data: { jobId: created.id, fromStatus: null, toStatus: "pending", note: "Job dibuat" },
     });
-    return job;
+    return created;
   });
+  // Sinyal bangun di luar transaksi, hanya bila sukses. Detail diambil
+  // assistant lewat GET /api/agent/jobs?status=pending.
+  broadcastAgentEvent({ type: "job_created", jobId: job.id, at: new Date().toISOString() });
+  return job;
 }
 
 /**
@@ -91,7 +96,7 @@ export async function updateJobStatus(
 
 /** Admin: ulangi job failed → pending. */
 export async function retryJob(id: string): Promise<boolean> {
-  return prisma.$transaction(async (tx) => {
+  const ok = await prisma.$transaction(async (tx) => {
     const res = await tx.job.updateMany({
       where: { id, status: "failed" },
       data: { status: "pending", error: null },
@@ -102,11 +107,13 @@ export async function retryJob(id: string): Promise<boolean> {
     });
     return true;
   });
+  if (ok) broadcastAgentEvent({ type: "job_created", jobId: id, at: new Date().toISOString() });
+  return ok;
 }
 
 /** Admin: reset job processing yg macet → pending. */
 export async function resetStuckJob(id: string, stuckBefore: Date): Promise<boolean> {
-  return prisma.$transaction(async (tx) => {
+  const ok = await prisma.$transaction(async (tx) => {
     const res = await tx.job.updateMany({
       where: { id, status: "processing", updatedAt: { lt: stuckBefore } },
       data: { status: "pending" },
@@ -117,6 +124,8 @@ export async function resetStuckJob(id: string, stuckBefore: Date): Promise<bool
     });
     return true;
   });
+  if (ok) broadcastAgentEvent({ type: "job_created", jobId: id, at: new Date().toISOString() });
+  return ok;
 }
 
 export async function listJobs(options: { status?: string; take: number; skip: number }): Promise<{ jobs: Job[]; total: number }> {

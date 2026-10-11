@@ -34,6 +34,7 @@
 | 2026-10-11 | Bugfix: proxy blokir `/api/auth/*` (tambah whitelist) + redirect bocor ke localhost:3001 (lib/public-url.ts via X-Forwarded-Proto/Host) + cacheComponents vs force-dynamic (matikan cacheComponents) + Date.now purity (serverNow) | done | login→domain publik, build 0 |
 | 2026-10-11 | Fase 6 verifikasi §12 + redeploy: tsc/lint/build bersih, guard+401+login/logout+rate-limit(5/15mnt)+claim race+PATCH+upload+unduh+bundle bersih, PM2 restart+save, data uji dibersihkan | done | semua 200/401/409/400 sesuai spek |
 | 2026-10-11 | Rombak UI/UX penuh: `globals.css` (float/pop/rise/shimmer/pulse-dot, stagger, card-lift, btn-press), komponen baru (aurora, stat-card, job-card, event-timeline, header kaca, badge ikon), halaman (hero+statistik+empty state, form kartu, detail hero, login kartu). tsc/lint/build 0, redeploy PM2, API tetap 401/200 OK | done | live https://short.hgitopup.web.id |
+| 2026-10-11 | SSE realtime agent: `lib/agent-events.ts` (Set broadcaster, sync/job_created/ping, auto-hapus gagal) + `GET /api/agent/events` (guard x-api-key 401, force-dynamic, sync id pending, heartbeat 20s, header X-Accel-Buffering no) + hook broadcast di createJob/retryJob/resetStuckJob (di luar transaksi) + location nginx buffering off. Uji end-to-end: sync OK, job_created tiba ~6 dtk, ping mengalir. tsc/lint/build 0 | done | live, route uji sementara + 3 job uji sudah dihapus |
 
 ## Checklist fase (urut kerja)
 - [x] 0. Scaffold + AGENTS.md restore + verifikasi tsc/lint
@@ -47,6 +48,7 @@
 - [x] 7. Verifikasi akhir §12 (claim race, 401/409/400, upload, no secret di bundle, 360px)
 - [ ] 8. Sisa manual: cek tampilan 360px di browser HP + ganti password admin default (lihat bawah)
 - [x] 9. Rombak UI/UX: aurora bg animasi + hero gradien + stat card + filter pil + kartu job + timeline + form + login, ikon lucide-react 1.55.0, stagger/pop/rise/float/shimmer, reduced-motion, responsif 360px→desktop (grid 2 kol)
+- [x] 10. SSE realtime agent: `GET /api/agent/events` (x-api-key, sync pending, heartbeat 20s, buffering off di nginx) + broadcast job_created dari createJob/retryJob/resetStuckJob — assistant tanpa IP publik tahan koneksi, polling tetap jalan sebagai fallback
 
 ## Keputusan infra (dicatat agar tidak lupa)
 1. **Port 3001** untuk Shorts Studio — port 3000 milik `pansa-gateway` (PM2, `/root/project`). Jangan ubah.
