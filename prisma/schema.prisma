@@ -41,3 +41,19 @@ model JobEvent {
   @@index([jobId])
   @@map("job_events")
 }
+
+/**
+ * Antrean event SSE untuk assistant eksternal (pengganti broadcaster in-memory).
+ * broadcast = INSERT baris; tiap koneksi SSE mengklaim baris deliveredAt NULL
+ * via updateMany lalu mengirimnya. Tahan multi-proses maupun restart.
+ */
+model SseEvent {
+  id          String   @id @default(cuid())
+  type        String
+  jobId       String?
+  createdAt   DateTime @default(now())
+  deliveredAt DateTime?
+
+  @@index([deliveredAt])
+  @@map("sse_events")
+}

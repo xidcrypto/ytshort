@@ -1,70 +1,85 @@
 import "server-only";
 
+import { prisma } from "./db";
+
 /**
- * Broadcaster SSE in-memory untuk AI assistant eksternal.
+ * Antrean event SSE berbasis tabel `sse_events` (pengganti broadcaster in-memory).
  *
- * Aplikasi jalan sebagai satu proses Node di satu VPS, jadi cukup simpan
- * daftar client dalam sebuah Set di level modul. Tidak pernah membocorkan
- * AGENT_API_KEY lewat event — payload hanya sinyal bangun (type + jobId);
- * detail job tetap diambil lewat GET /api/agent/jobs?status=pending.
+ * broadcast = INSERT satu baris; tiap koneksi SSE di route
+ * app/api/agent/events mengklaim baris `deliveredAt` NULL via updateMany lalu
+ * mengirimnya. Tidak bergantung memori satu proses Node — aman untuk
+ * multi-proses maupun restart.
+ *
+ * Tidak pernah membocorkan AGENT_API_KEY lewat event — payload hanya sinyal
+ * bangun (type + jobId); detail job tetap diambil lewat
+ * GET /api/agent/jobs?status=pending.
  */
 
-type DataClient = ReadableStreamDefaultController<Uint8Array>;
-
-const clients = new Set<DataClient>();
-
-const encoder = new TextEncoder();
+/** Tipe event yang dikenal. */
+export const SSE_EVENT_TYPES = ["job_created"] as const;
+export type SseEventType = (typeof SSE_EVENT_TYPES)[number];
 
 /** Payload event yang dikirim ke agent. Hanya sinyal — tanpa data sensitif. */
 export type AgentEventPayload = {
-  type: "sync" | "job_created" | "ping";
+  type: "sync" | SseEventType;
   jobIds?: string[];
   jobId?: string;
   at?: string;
 };
 
-function encodeData(payload: AgentEventPayload): Uint8Array {
-  return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
-}
-
-/** Daftarkan controller stream client baru. */
-export function addAgentClient(client: DataClient): void {
-  clients.add(client);
-}
-
-/** Hapus controller dari daftar (dipanggil saat client putus). */
-export function removeAgentClient(client: DataClient): void {
-  clients.delete(client);
-}
-
-/** Jumlah client yang sedang tersambung (untuk observasi, bukan untuk di-log). */
-export function agentClientCount(): number {
-  return clients.size;
-}
-
 /**
- * Tulis satu baris data JSON ke semua client.
- * Client yang gagal ditulis otomatis dihapus dari daftar.
+ * Tulis sinyal ke antrean database. Fire-and-forget dari pemanggil:
+ * kegagalan tulis tidak boleh menggagalkan transaksi job utama.
  */
-export function broadcastAgentEvent(payload: AgentEventPayload): void {
-  const bytes = encodeData(payload);
-  for (const client of Array.from(clients)) {
-    try {
-      client.enqueue(bytes);
-    } catch {
-      clients.delete(client);
-    }
+export async function broadcastAgentEvent(payload: { type: SseEventType; jobId: string }): Promise<void> {
+  try {
+    await prisma.sseEvent.create({
+      data: { type: payload.type, jobId: payload.jobId },
+    });
+  } catch {
+    // Antrean event bersifat best-effort; client juga mendapat daftar
+    // pending lewat event sync + polling biasa. Jangan lempar error.
   }
 }
 
-/** Tulis baris komentar ping ke semua client (heartbeat agar koneksi hidup). */
-export function heartbeatAgentClients(): void {
-  const bytes = encoder.encode(": ping\n\n");
-  for (const client of Array.from(clients)) {
-    try {
-      client.enqueue(bytes);
-    } catch {
-      clients.delete(client);
-    }
+/**
+ * Klaim event yang belum terkirim: tandai deliveredAt, kembalikan baris
+ * yang berhasil diklaim. Dipakai route SSE tiap poll 2 detik.
+ */
+export async function claimUndeliveredEvents(
+  now: Date,
+): Promise<Array<{ id: string; type: string; jobId: string | null; createdAt: Date }>> {
+  // Ambil kandidat dulu (id saja), lalu klaim atomik per baris agar dua
+  // koneksi SSE tidak mengirim event yang sama.
+  const candidates = await prisma.sseEvent.findMany({
+    where: { deliveredAt: null },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+    take: 50,
+  });
+  const claimed: Array<{ id: string; type: string; jobId: string | null; createdAt: Date }> = [];
+  for (const c of candidates) {
+    const res = await prisma.sseEvent.updateMany({
+      where: { id: c.id, deliveredAt: null },
+      data: { deliveredAt: now },
+    });
+    if (res.count === 0) continue;
+    const row = await prisma.sseEvent.findUnique({
+      where: { id: c.id },
+      select: { id: true, type: true, jobId: true, createdAt: true },
+    });
+    if (row) claimed.push(row);
+  }
+  return claimed;
+}
+
+/** Hapus baris yang sudah terkirim lebih dari 1 jam (oportunistik tiap poll). */
+export async function pruneDeliveredEvents(now: Date): Promise<void> {
+  try {
+    await prisma.sseEvent.deleteMany({
+      where: { deliveredAt: { lt: new Date(now.getTime() - 60 * 60 * 1000) } },
+    });
+  } catch {
+    // Best-effort; kegagalan cleanup tidak mengganggu pengiriman.
   }
 }

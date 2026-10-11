@@ -38,7 +38,7 @@ export async function createJob(input: {
   });
   // Sinyal bangun di luar transaksi, hanya bila sukses. Detail diambil
   // assistant lewat GET /api/agent/jobs?status=pending.
-  broadcastAgentEvent({ type: "job_created", jobId: job.id, at: new Date().toISOString() });
+  void broadcastAgentEvent({ type: "job_created", jobId: job.id });
   return job;
 }
 
@@ -107,7 +107,7 @@ export async function retryJob(id: string): Promise<boolean> {
     });
     return true;
   });
-  if (ok) broadcastAgentEvent({ type: "job_created", jobId: id, at: new Date().toISOString() });
+  if (ok) void broadcastAgentEvent({ type: "job_created", jobId: id });
   return ok;
 }
 
@@ -124,7 +124,7 @@ export async function resetStuckJob(id: string, stuckBefore: Date): Promise<bool
     });
     return true;
   });
-  if (ok) broadcastAgentEvent({ type: "job_created", jobId: id, at: new Date().toISOString() });
+  if (ok) void broadcastAgentEvent({ type: "job_created", jobId: id });
   return ok;
 }
 
