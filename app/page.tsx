@@ -137,8 +137,9 @@ export default async function DashboardPage({
           <StatCard label="Gagal" value={countOf("failed")} Icon={XCircle} accent="bg-rose-600" delay="240ms" />
         </section>
 
-        {/* Filter */}
-        <div className="mt-5 flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Filter status">
+        {/* Filter — scroll={false} agar klik tab tidak lompat ke atas.
+            Tanpa ini, Next.js me-reset scroll ke 0 setiap navigasi. */}
+        <div id="daftar" className="mt-5 flex scroll-mt-20 gap-2 overflow-x-auto pb-2" role="group" aria-label="Filter status">
           {FILTERS.map((f) => {
             const active = status === f.value;
             const href = f.value ? `/?status=${f.value}` : "/";
@@ -146,6 +147,7 @@ export default async function DashboardPage({
               <Link
                 key={f.label}
                 href={href}
+                scroll={false}
                 aria-current={active ? "true" : undefined}
                 className={`btn-press inline-flex min-h-[44px] shrink-0 items-center rounded-full px-4 text-sm font-bold whitespace-nowrap ${
                   active
@@ -171,6 +173,7 @@ export default async function DashboardPage({
             {page > 1 ? (
               <Link
                 href={pageLink(page - 1)}
+                scroll={false}
                 className="btn-press inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl border border-[#e5e9f2] bg-white px-4 text-sm font-bold"
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -185,6 +188,7 @@ export default async function DashboardPage({
             {page < totalPages ? (
               <Link
                 href={pageLink(page + 1)}
+                scroll={false}
                 className="btn-press inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl border border-[#e5e9f2] bg-white px-4 text-sm font-bold"
               >
                 <span className="hidden min-[400px]:inline">Berikutnya</span>
