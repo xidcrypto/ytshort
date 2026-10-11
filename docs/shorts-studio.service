@@ -1,0 +1,17 @@
+[Unit]
+Description=Shorts Studio (Next.js, port 3001)
+After=network.target
+
+[Service]
+Type=simple
+User=shorts
+WorkingDirectory=/opt/shorts-studio
+EnvironmentFile=/opt/shorts-studio/.env
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+# Izinkan tulis ke folder uploads bila memakai hardening ProtectSystem=strict
+ReadWritePaths=/opt/shorts-studio/uploads
+
+[Install]
+WantedBy=multi-user.target

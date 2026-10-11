@@ -1,0 +1,43 @@
+// Skema Prisma Shorts Studio (AGENTS.md §5).
+// Provider MySQL, status & privasi disimpan sebagai string.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Job {
+  id             String   @id @default(cuid())
+  topic          String   @db.Text
+  title          String?
+  description    String?  @db.Text
+  privacy        String   @default("public")
+  status         String   @default("pending")
+  youtubeUrl     String?
+  youtubeVideoId String?
+  error          String?  @db.Text
+  videoFile      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  events         JobEvent[]
+
+  @@index([status])
+  @@map("jobs")
+}
+
+model JobEvent {
+  id         String   @id @default(cuid())
+  jobId      String
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  fromStatus String?
+  toStatus   String
+  note       String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([jobId])
+  @@map("job_events")
+}
