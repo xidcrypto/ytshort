@@ -43,6 +43,19 @@ model JobEvent {
 }
 
 /**
+ * Override pengaturan lewat UI tanpa restart (route /settings).
+ * key: "agent_api_key" | "admin_password_hash".
+ * Helper getEffective* membaca tabel ini dulu, fallback ke env.
+ */
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+/**
  * Antrean event SSE untuk assistant eksternal (pengganti broadcaster in-memory).
  * broadcast = INSERT baris; tiap koneksi SSE mengklaim baris deliveredAt NULL
  * via updateMany lalu mengirimnya. Tahan multi-proses maupun restart.

@@ -14,17 +14,17 @@ export function NewJobForm(): React.ReactElement {
     const msgs = state.errors?.[name];
     if (!msgs || msgs.length === 0) return null;
     return (
-      <p role="alert" className="animate-pop-in flex items-center gap-1 text-sm font-medium text-rose-700">
+      <p role="alert" className="flex items-center gap-1 text-sm font-medium text-rose-700">
         {msgs.join(" ")}
       </p>
     );
   };
 
   const inputCls =
-    "min-h-[44px] w-full rounded-2xl border border-gray-200 bg-white/90 px-4 text-base shadow-sm outline-none backdrop-blur transition focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15";
+    "min-h-[44px] w-full rounded-2xl border border-gray-200 bg-white px-4 text-base shadow-sm outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15";
 
   return (
-    <form action={action} className="animate-pop-in mt-5 flex flex-col gap-4 rounded-3xl border border-white/60 bg-white/85 p-4 shadow-xl shadow-rose-500/5 backdrop-blur sm:p-6">
+    <form action={action} className="mt-5 flex flex-col gap-4 rounded-3xl border border-[#e5e9f2] bg-white p-4 shadow-rose-500/5 sm:p-6">
       <label className="flex flex-col gap-1.5 text-sm font-bold">
         <span className="flex items-center gap-1.5">
           <Tags className="h-4 w-4 text-rose-500" aria-hidden />
@@ -75,7 +75,7 @@ export function NewJobForm(): React.ReactElement {
           ).map(([value, label, desc]) => (
             <label
               key={value}
-              className="btn-press flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-2xl border border-gray-200 bg-white/80 px-3 py-2.5 text-sm has-[:checked]:border-rose-400 has-[:checked]:bg-rose-50 has-[:checked]:shadow-md has-[:checked]:shadow-rose-500/10"
+              className="btn-press flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-2xl border border-gray-200 bg-white px-3 py-2.5 text-sm has-[:checked]:border-rose-400 has-[:checked]:bg-rose-50 has-[:checked]:shadow-md has-[:checked]:shadow-rose-500/10"
             >
               <input type="radio" name="privacy" value={value} defaultChecked={value === "public"} className="h-5 w-5 accent-rose-600" />
               <span>
@@ -91,7 +91,7 @@ export function NewJobForm(): React.ReactElement {
       <button
         type="submit"
         disabled={pending}
-        className="btn-press inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-600 via-fuchsia-600 to-indigo-600 px-4 text-base font-extrabold text-white shadow-xl shadow-fuchsia-500/30 disabled:opacity-60"
+        className="btn-press inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 text-base font-extrabold text-white disabled:opacity-60"
       >
         {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Send className="h-5 w-5" aria-hidden />}
         {pending ? "Menyimpan…" : "Simpan Video"}

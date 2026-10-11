@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/agent/jobs?status=pending — FIFO untuk pending, maks 100 terbaru. */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const denied = requireAgentKey(request);
+  const denied = await requireAgentKey(request);
   if (denied) return denied;
 
   const parsed = agentJobsQuerySchema.safeParse({

@@ -23,7 +23,7 @@ const encoder = new TextEncoder();
  * tiap chunk di-flush ke socket segera setelah di-enqueue.
  */
 export async function GET(request: Request): Promise<Response> {
-  const denied = requireAgentKey(request);
+  const denied = await requireAgentKey(request);
   if (denied) return denied;
 
   let closed = false;

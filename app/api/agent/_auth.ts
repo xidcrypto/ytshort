@@ -3,7 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 
 import { getAgentKeyFromHeaders, isValidAgentKey } from "@/lib/agent-auth";
-import { getEnv } from "@/lib/env";
+import { getEffectiveAgentKey } from "@/lib/settings";
 
 /** 401 konsisten bila x-api-key salah (§8). Jangan bocorkan detail. */
 export function unauthorized(): NextResponse {
@@ -11,8 +11,8 @@ export function unauthorized(): NextResponse {
 }
 
 /** Guard tiap handler /api/agent/*: return null bila lolos, else respons 401. */
-export function requireAgentKey(request: Request): NextResponse | null {
+export async function requireAgentKey(request: Request): Promise<NextResponse | null> {
   const provided = getAgentKeyFromHeaders(request.headers);
-  if (!isValidAgentKey(provided, getEnv().AGENT_API_KEY)) return unauthorized();
+  if (!isValidAgentKey(provided, await getEffectiveAgentKey())) return unauthorized();
   return null;
 }

@@ -12,7 +12,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const denied = requireAgentKey(request);
+  const denied = await requireAgentKey(request);
   if (denied) return denied;
 
   const { id } = await params;
